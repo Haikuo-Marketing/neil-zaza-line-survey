@@ -1,0 +1,215 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1">
+
+  <title>Neil Zaza｜海國音樂喜好調查</title>
+
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #151515;
+      color: #ffffff;
+      font-family: Arial, "Noto Sans TC", sans-serif;
+      text-align: center;
+      padding: 55px 22px;
+    }
+
+    .container {
+      max-width: 430px;
+      margin: auto;
+    }
+
+    .eyebrow {
+      color: #06c755;
+      font-size: 14px;
+      letter-spacing: 2px;
+      font-weight: bold;
+    }
+
+    h1 {
+      font-size: 34px;
+      line-height: 1.4;
+      margin: 20px 0;
+    }
+
+    p {
+      color: #cccccc;
+      font-size: 16px;
+      line-height: 1.9;
+    }
+
+    button {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      background: #06c755;
+      color: white;
+      font-size: 17px;
+      font-weight: bold;
+      margin-top: 22px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #555555;
+      cursor: not-allowed;
+    }
+
+    #status {
+      font-size: 14px;
+      margin-top: 20px;
+      color: #aaaaaa;
+      line-height: 1.7;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #888888;
+      margin-top: 36px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <div class="eyebrow">HAIGUO MUSIC</div>
+
+    <h1>
+      🎸 Neil Zaza<br>
+      吉他講習會
+    </h1>
+
+    <h2>音樂喜好調查</h2>
+
+    <p>
+      感謝參加 Neil Zaza 吉他講習會！
+      <br>
+      花約 2 分鐘告訴我們你的音樂喜好，
+      <br>
+      一起探索更多音樂新鮮事！
+    </p>
+
+    <button id="startBtn" disabled>
+      正在連線...
+    </button>
+
+    <div id="status">
+      正在確認 LINE 身分...
+    </div>
+
+    <p class="note">
+      問卷資料將用於海國樂器會員服務、
+      活動分析與音樂資訊推播。
+    </p>
+
+  </div>
+
+  <script>
+    // 建立 LIFF 後填入
+    const LIFF_ID = "請填入LIFF_ID";
+
+    // 已確認的 Google 表單
+    const FORM_URL =
+      "https://docs.google.com/forms/d/e/" +
+      "1FAIpQLSehkY4ntxvMvegK16xfaGUBzx43jmzsqkS7-gbjc1eXU2z_VA/" +
+      "viewform";
+
+    // UID 對應欄位
+    const UID_ENTRY = "entry.93238210";
+
+    let lineUID = "";
+
+    const startBtn =
+      document.getElementById("startBtn");
+
+    const status =
+      document.getElementById("status");
+
+    async function initializeLIFF() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+
+        if (!liff.isLoggedIn()) {
+          liff.login({
+            redirectUri: window.location.href
+          });
+          return;
+        }
+
+        const profile = await liff.getProfile();
+        lineUID = profile.userId;
+
+        if (!/^U[0-9a-fA-F]{32}$/.test(lineUID)) {
+          throw new Error("UID 格式不正確");
+        }
+
+        startBtn.disabled = false;
+        startBtn.textContent = "開始填寫問卷";
+        status.textContent =
+          "LINE 身分確認完成！";
+
+      } catch (error) {
+        console.error(error);
+        startBtn.disabled = true;
+        startBtn.textContent = "無法連線";
+        status.textContent =
+          "LINE 連線失敗，請重新開啟活動連結。";
+      }
+    }
+
+    async function startSurvey() {
+      if (!lineUID) return;
+
+      startBtn.disabled = true;
+
+      try {
+        // 檢查是否已加入海國官方帳號
+        const friendship = await liff.getFriendship();
+
+        if (!friendship.friendFlag) {
+          status.textContent =
+            "請先加入海國樂器 LINE 官方帳號。";
+
+          // 顯示加好友或解除封鎖提示
+          await liff.requestFriendship();
+
+          const updated = await liff.getFriendship();
+
+          if (!updated.friendFlag) {
+            status.textContent =
+              "尚未確認加入好友，請先完成加入後再試一次。";
+            return;
+          }
+        }
+
+        const form = new URL(FORM_URL);
+        form.searchParams.set("usp", "pp_url");
+        form.searchParams.set(UID_ENTRY, lineUID);
+
+        window.location.href = form.toString();
+
+      } catch (error) {
+        console.error(error);
+        status.textContent =
+          "確認好友狀態時發生問題，請檢查 LIFF 設定。";
+      } finally {
+        startBtn.disabled = false;
+      }
+    }
+
+    startBtn.addEventListener("click", startSurvey);
+    initializeLIFF();
+  </script>
+
+</body>
+</html>
